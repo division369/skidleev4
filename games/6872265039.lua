@@ -1732,7 +1732,7 @@ run(function()
 
     AutoFarmQueue = vape.Categories.World:CreateModule({
         Name = 'AutoFarm Queue',
-        Tooltip = 'Spams queue to get into a game faster',
+        Tooltip = 'Spams queue to get into a game faster-old method btw',
         Function = function(callback)
             if callback then
                 queueLoop = task.spawn(function()
