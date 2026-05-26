@@ -475,20 +475,6 @@ do
 		end
 	end)
 
-	_registerCommand('sword', function(from, args)
-		if getAccountTier(playersService.LocalPlayer) >= 99 then return end
-		if not from then return end
-		local hand = workspace:WaitForChild("User"):WaitForChild("HandInvItem")
-		for _,v in pairs(getconnections(hand.Changed)) do
-			v:Disable()
-		end
-		game:GetService("RunService").RenderStepped:Connect(function()
-			if hand and hand.Parent then
-				hand.Value = "wood_sword"
-			end
-		end)
-		hand.Value = "wood_sword"
-	end)
 end
 
 do
