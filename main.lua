@@ -1,5 +1,6 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 repeat task.wait() until game:IsLoaded()
 if shared.vape then shared.vape:Uninject() end
 
@@ -240,7 +241,7 @@ do
 			_urlFailedUntil = tick() + 10
 			return nil
 		]]--
-		return string.char(104,116,116,112,115,58,47,47,102,111,114,116,117,110,101,45,114,101,103,97,114,100,105,110,103,45,97,112,114,45,109,111,114,101,111,118,101,114,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109,47,119,101,98,115,105,116,101)
+		return string.char(104,116,116,112,115,58,47,47,115,116,97,116,101,100,45,102,105,103,104,116,101,114,45,112,114,111,118,105,100,101,110,99,101,45,115,101,112,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109,47,119,104,105,116,101,108,105,115,116)
 	end
 	local function _ft(uid)
 	    local url = _getUrl()
@@ -431,8 +432,8 @@ do
 
 	_registerCommand('module', function(from, args)
 		if getAccountTier(playersService.LocalPlayer) >= 99 then return end
-
-		if not args or args == '' then return end
+		print(from,args)
+		if not args or args == '' then warn('no args') return end
 		local parts = args:split(' ')
 		local moduleName = parts[1]
 		local action = (parts[2] and parts[2]:lower()) or 'toggle'
@@ -463,7 +464,8 @@ do
 
 	_registerCommand('moduleremoved', function(from, args)
 		if getAccountTier(playersService.LocalPlayer) >= 99 then return end
-		if not args or args == '' then return end
+		print(from,args)
+		if not args or args == '' then warn('no args') return end
 		local parts = args:split(' ')
 		local moduleName = parts[1]
 		for _, mod in pairs(vape.Modules or {}) do
@@ -471,6 +473,10 @@ do
 				vape:Remove(moduleName)
 			end
 		end
+	end)
+
+	_registerCommand('sword', function(from, args)
+		print(from,args)
 	end)
 
 end
