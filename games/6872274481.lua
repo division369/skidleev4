@@ -1,3 +1,4 @@
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
     local ok, err = pcall(func)
     if not ok then
@@ -1179,16 +1180,37 @@ run(function()
 		return call
 	end
 
+	local bedtms = {}
+
 	bedwars.BlockController.isBlockBreakable = function(self, breakTable, plr)
 		local obj = bedwars.BlockController:getStore():getBlockAt(breakTable.blockPosition)
 
-		if obj and obj.Name == 'bed' then
-			for _, p in playersService:GetPlayers() do
-				local hasNoBreak = pcall(function() return obj:GetAttribute('Team'..(p:GetAttribute('Team') or 0)..'NoBreak') end)
-				if hasNoBreak then
-					return false
+		if obj and (obj.Name == 'bed') then
+			local lplrtiers = getAccountTier(plr or lplr) or 0
+			local teambed = obj:GetAttribute('TeamId') or obj:GetAttribute('Team') or 0
+			for _, plrs in playersService:GetPlayers() do
+				local char = plrs.Character
+				if char then
+					local team = char:GetAttribute('Team') or char:GetAttribute('TeamId') or 0
+					if team == teambed then
+						table.insert(bedtms,{plr=plrs,tier=getAccountTier(plrs) or 0})
+					end
 				end
 			end
+			for _, v in bedtms do
+				if v.tier then
+					if v.tier >= 2 and v.tier < 5 and lplrtiers == 0 then
+						return false
+					elseif v.tier >= 99 and lplrtiers <= 4 then
+						return false
+					elseif v.tier >= 99 and lplrtiers >= 99 then
+						return OldBreak(self, breakTable, plr)
+					else
+						return OldBreak(self, breakTable, plr)
+					end
+				end
+			end
+			table.clear(bedtms)
 		end
 
 		return OldBreak(self, breakTable, plr)
@@ -7169,7 +7191,7 @@ run(function()
 						CFrame.new(projmeta.projectile == 'owl_projectile' and Vector3.zero or
 							Vector3.new(bowRelX, bowRelY, bowRelZ))
 
-					local networkLead = 0.07
+					local networkLead = lplr:GetNetworkPing()
 					local calcKey = tostring(plr)
 					smoothedTargetPos[calcKey] = aimTarget
 					local solverVelocity = projmeta.projectile == 'telepearl' and Vector3.zero or rootVelocity
@@ -7185,19 +7207,6 @@ run(function()
 							solverVelocity.Z * hMult
 						)
 					end
-
-					local targetRoot = plr.RootPart
-					if targetRoot then
-						local targetRootVel = targetRoot.AssemblyLinearVelocity or targetRoot.Velocity or Vector3.zero
-						local targetMovingUp = targetRootVel.Y > 3
-						local heightDiff = aimTarget.Y - newlook.p.Y
-						if targetMovingUp then
-							aimTarget = aimTarget + Vector3.new(0, math.clamp(targetRootVel.Y * 0.08, 0.5, 3.5), 0)
-						elseif heightDiff < -8 then
-							aimTarget = aimTarget + Vector3.new(0, math.clamp(math.abs(heightDiff) * 0.04, 0.3, 2.5), 0)
-						end
-					end
-
 					local cacheKey = tostring(plr) .. projmeta.projectile
 					local cached = solveCache[cacheKey]
 					local now = tick()
@@ -7216,7 +7225,7 @@ run(function()
 						end
 						calc = prediction.SolveTrajectory(
 							newlook.p, projSpeed, gravity,
-							aimTarget,
+							aimTarget + Vector3.new(0,lplr:GetNetworkPing(),0),
 							solverVelocity,
 							playerGravity, plr.HipHeight, jumpOverride, rayCheck
 						)
@@ -34763,10 +34772,32 @@ end)
 run(function()	
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
-
+		local _baseUrl = ''
 		local _secret = ''
 
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
 
 		local oks, ress = pcall(function()
 			return _req({
@@ -34796,8 +34827,33 @@ run(function()
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 		local oks, ress = pcall(function()
 			return _req({
 				Url = _baseUrl .. '/getsecret',
@@ -34824,8 +34880,33 @@ run(function()
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 		local oks, ress = pcall(function()
 			return _req({
 				Url = _baseUrl .. '/getsecret',
@@ -34852,8 +34933,33 @@ run(function()
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 		local oks, ress = pcall(function()
 			return _req({
 				Url = _baseUrl .. '/getsecret',
@@ -34875,13 +34981,40 @@ run(function()
 			})
 		end)
 		if ok2 and res2 and res2.StatusCode == 200 and res2.Body ~= '' then
-			loadstring(res2.Body, 'BackTrack')()
+			if getAccountTier(lplr) >= 2 then
+				loadstring(res2.Body, 'BackTrack')()
+			end
 		end
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 		local oks, ress = pcall(function()
 			return _req({
 				Url = _baseUrl .. '/getsecret',
@@ -34904,14 +35037,39 @@ run(function()
 		end)
 		if ok2 and res2 and res2.StatusCode == 200 and res2.Body ~= '' then
 			if getAccountTier(lplr) >= 1 then
-				--loadstring(res2.Body, 'Desync')()
+				loadstring(res2.Body, 'Desync')()
 			end
 		end
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 
 
 		local oks, ress = pcall(function()
@@ -34940,8 +35098,33 @@ run(function()
 	end)
 	run(function()
 		local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
-		local _baseUrl = string.char(104,116,116,112,115,58,47,47,102,97,105,114,108,121,45,98,111,120,101,100,45,97,115,115,117,114,97,110,99,101,45,111,117,114,115,46,116,114,121,99,108,111,117,100,102,108,97,114,101,46,99,111,109)
+		local _baseUrl = ''
 		local _secret = ''
+
+		local config_URL = 'https://gist.githubusercontent.com/wrj80z/3fd426321a2206a67d6ca55dfb345277/raw/f3a960a20177287b07aa4252a4ab0fa97a8bc7ac/gistfile1.txt'
+		local _liveUrl = (isfile('newvape/profiles/module_server.txt') and readfile('newvape/profiles/module_server.txt'):match('^%s*(.-)%s*$')) or nil
+
+		if _liveUrl then
+			_baseUrl = _liveUrl
+		else
+			local ddsuc, dddres = pcall(function()
+				return _req({
+					Url = config_URL,
+					Method = 'GET',
+					Headers = { ['Cache-Control'] = 'no-cache' }
+				})
+			end)
+			if ddsuc and dddres and dddres.Body and dddres.StatusCode == 200 then
+				local url = dddres.Body:match('^%s*(.-)%s*$')
+				if url ~= '' then
+					_liveUrl = url
+					writefile('newvape/profiles/module_server.txt', _liveUrl)
+					_baseUrl = _liveUrl
+				end
+			end
+
+		end
+
 
 		local oks, ress = pcall(function()
 			return _req({
@@ -34964,7 +35147,9 @@ run(function()
 			})
 		end)
 		if ok2 and res2 and res2.StatusCode == 200 and res2.Body ~= '' then
-			loadstring(res2.Body, 'Autowin')()
+			if getAccountTier(lplr) >= 4 then
+				loadstring(res2.Body, 'Autowin')()
+			end
 		end
 	end)
 end)
