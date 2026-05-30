@@ -1,4 +1,4 @@
---This watermark is used to delete the file if its cached, remove it to make the file persist afte
+--This watermark is used to delete the file if its cached, remove it to make the file persist aft
 repeat task.wait() until game:IsLoaded()
 if shared.vape then shared.vape:Uninject() end
 
